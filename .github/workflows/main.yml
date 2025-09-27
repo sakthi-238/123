@@ -1,0 +1,45 @@
+name: Run Python Script and Commit Output
+
+on:
+  schedule:
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set Up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Decode and Create 123.py from Secret
+        run: echo "${{ secrets.ABC }}" | base64 -d > 123.py
+
+      - name: Run Script
+        run: python 123.py
+
+      - name: Commit and Push Changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add *.txt || echo "No 123 files found to add."
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Update generated 123 file [skip ci]"
+            git push
+          else
+            echo "No changes to commit."
+          fi
